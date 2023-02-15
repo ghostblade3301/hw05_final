@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+{% load user_filters %}
+{% block title %}
+  Все сообщения избранных авторов
+{% endblock %}
+{% block content %}
+  {% include 'includes/switcher.html' %}
+  <div class="container py-5">
+    <h2>Избранные авторы</h2>
+
+    <article>
+      {% for post in page_obj %}
+        {% include 'includes/liked.html' %}
+      {% endfor %}
+    </article>
+    {% include 'includes/paginator.html' %}
+  </div>
+{% endblock content %} 
