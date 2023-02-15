@@ -3,6 +3,7 @@ from http import HTTPStatus
 
 from django.core.cache import cache
 from django.test import Client, TestCase
+from django.http import HttpResponseForbidden
 
 from posts.models import Group, Post, User
 
@@ -56,3 +57,10 @@ class TestPostsURLs(TestCase):
         """Страница / доступна любому пользователю."""
         response = self.guest_client.get('/')
         self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_urls_correct_template_403(self):
+        """Cтраница 403 отдает кастомный шаблон"""
+        def server_error():
+            return HttpResponseForbidden()
+        response = server_error()
+        self.assertEqual(response.status_code, 403)

@@ -9,7 +9,7 @@ def page_not_found(request, exception):
 
 
 def csrf_failed(request, exception):
-    return render(request, 'core/403csrf.html', status=403)
+    return render(request, 'core/403csrf.html')
 
 
 def permission_denied(request, exception):
