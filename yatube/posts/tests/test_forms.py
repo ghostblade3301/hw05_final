@@ -140,6 +140,7 @@ class CommentTests(TestCase):
         cls.user = User.objects.create_user(username='user')
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
+        cls.guest_user = Client()
 
         # create group in DB
         cls.group = Group.objects.create(
@@ -155,8 +156,9 @@ class CommentTests(TestCase):
             group=cls.group,
         )
 
-    def test_comment_form(self):
-        """Проверка создания комментария с дальнейшим редиректом"""
+    def test_comment_form_authorized_client(self):
+        """Проверка создания комментария с дальнейшим редиректом
+        авторизированного юзера"""
         form_data = {
             'text': 'Test comment',
         }
@@ -170,3 +172,15 @@ class CommentTests(TestCase):
         self.assertEqual(comment.author, self.user)
         self.assertEqual(comment.text, form_data['text'])
         self.assertEqual(comment.post.id, self.post.id)
+
+    def test_comment_form_unauthorized_client(self):
+        """Проверка создания комментария с дальнейшим редиректом
+        гостевого юзера"""
+        comment_count = Comment.objects.count()
+        form_data = {
+            'text': 'Comment from non-authorized client',
+        }
+        self.guest_user.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.post.id}),
+            data=form_data)
+        self.assertEqual(Comment.objects.count(), comment_count)

@@ -277,47 +277,56 @@ class TestPaginator(TestCase):
 
 
 class FollowingTest(TestCase):
-    """Тест подписок на автора поста"""
+    '''Тест подписок на автора поста'''
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user1 = User.objects.create_user(username='User1')
-        cls.user2 = User.objects.create_user(username='User2')
-        cls.user3 = User.objects.create_user(username='User3')
-        cls.authorized_user1 = Client()
-        cls.authorized_user1.force_login(cls.user1)
-        cls.authorized_user2 = Client()
-        cls.authorized_user2.force_login(cls.user2)
+        cls.user1 = User.objects.create(username='User1')
+        cls.user2 = User.objects.create(username='User2')
+        cls.user3 = User.objects.create(username='User3')
+        cls.post = Post.objects.create(text='Test post for follow',
+                                       author=cls.user1)
+
+    def setUp(self):
+        cache.clear()
+        self.user1_client = Client()
+        self.user1_client.force_login(self.user1)
+        self.user2_client = Client()
+        self.user2_client.force_login(self.user2)
 
     def test_authorized_user_can_follow(self):
-        """Авторизированный пользователь имеет
-        возможность подписаться на автора поста."""
-        page = reverse('posts:profile_follow',
-                       kwargs={'username': self.user3})
-        self.authorized_user1.get(page)
-        self.assertTrue(
-            Follow.objects.filter(
-                user=self.user1,
-                author=self.user3).exists()
+        '''Авторизированный пользователь имеет
+        возможность подписаться на автора поста'''
+        follow_count = Follow.objects.count()
+        self.user1_client.post(
+            reverse('posts:profile_follow', kwargs={'username': self.user2})
         )
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+        last_follow = Follow.objects.all().latest('id')
+        self.assertEqual(last_follow.author_id, self.user2.id)
+        self.assertEqual(last_follow.user_id, self.user1.id)
 
     def test_authorized_user_can_unfollow(self):
-        """Авторизированный пользователь может отписываться пользователей."""
-        Follow.objects.create(user=self.user2, author=self.user3)
-        page = reverse('posts:profile_unfollow',
-                       kwargs={'username': self.user3})
-        self.authorized_user2.get(page)
-        self.assertFalse(
-            Follow.objects.filter(user=self.user2, author=self.user3).exists())
+        '''Авторизированный пользователь может отписываться пользователей'''
+        Follow.objects.create(user=self.user1, author=self.user2)
+        follow_count = Follow.objects.count()
+        self.user1_client.post(reverse('posts:profile_unfollow',
+                                       kwargs={'username': self.user2}))
+        self.assertEqual(Follow.objects.count(), follow_count - 1)
 
     def test_new_post_appears_only_subscriber(self):
-        """Новая запись появляется у подписавшихся"""
+        '''Новая запись появляется у подписавшихся'''
         Follow.objects.create(user=self.user1, author=self.user3)
         post = Post.objects.create(author=self.user3, text='Test text')
         page = reverse('posts:follow_index')
-        response_obj_1 = self.authorized_user1.get(page)
-        response_obj_2 = self.authorized_user2.get(page)
+        response_obj_1 = self.user1_client.get(page)
         test_post1 = response_obj_1.context['page_obj']
-        test_post2 = response_obj_2.context['page_obj']
         self.assertIn(post, test_post1)
+
+    def test_no_new_post_for_nonsuscriber(self):
+        '''Новая запись не появляется у неподписавшихся'''
+        post = Post.objects.create(author=self.user3, text='Test text')
+        page = reverse('posts:follow_index')
+        response_obj_2 = self.user2_client.get(page)
+        test_post2 = response_obj_2.context['page_obj']
         self.assertNotIn(post, test_post2)

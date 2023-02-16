@@ -43,6 +43,7 @@ class TestPostsURLs(TestCase):
             '/create/': 'posts/create.html',
             f'/posts/{cls.post.pk}/edit/': 'posts/create.html',
             '/nopage/': 'core/404.html',
+            '/follow/': 'posts/follow.html',
         }
 
     # test templates and pages
